@@ -29,8 +29,8 @@ echo Mengecek Pembaruan...
 powershell -Command "try { Invoke-WebRequest -Uri '%SCRIPT_URL%' -OutFile '%TEMP_SCRIPT%' -ErrorAction Stop } catch { exit 1 }"
 if errorlevel 1 (
     echo GAGAL: Internet tidak tersedia atau belum terhubung!
-    echo Melanjutkan dalam 10 detik...
-    timeout /t 10 /nobreak >nul
+    echo Melanjutkan dalam 5 detik...
+    timeout /t 5 /nobreak >nul
     goto :MENU
 )
 
@@ -44,19 +44,19 @@ set /p NEW_MD5=<"%TEMP%\new_md5.txt"
 
 if "%LOCAL_MD5%"=="%NEW_MD5%" (
     echo Versi sudah terbaru.
-    echo Melanjutkan dalam 10 detik...
-    timeout /t 10 /nobreak >nul
+    echo Melanjutkan dalam 5 detik...
+    timeout /t 5 /nobreak >nul
 ) else (
     echo File baru terdeteksi! Mengupdate WinCare...
     move /y "%TEMP_SCRIPT%" "%~f0" >nul 2>&1
     if errorlevel 1 (
         echo GAGAL: Tidak bisa memperbarui file!
-        echo Melanjutkan dalam 10 detik...
-        timeout /t 10 /nobreak >nul
+        echo Melanjutkan dalam 5 detik...
+        timeout /t 5 /nobreak >nul
     ) else (
         echo Update SUKSES!
-        echo Melanjutkan dalam 10 detik...
-        timeout /t 10 /nobreak >nul
+        echo Melanjutkan dalam 5 detik...
+        timeout /t 5 /nobreak >nul
         start "" "%~f0"
         exit
     )
@@ -130,14 +130,16 @@ sc query wuauserv | find "RUNNING" >nul
 if not errorlevel 1 net stop wuauserv
 sc config wuauserv start= disabled
 echo [%date% %time%] Windows Update dinonaktifkan >> "%LOGFILE%"
-pause
+echo Melanjutkan dalam 5 detik...
+timeout /t 5 /nobreak >nul
 goto MENU
 
 :EnableUpdate
 sc config wuauserv start= auto
 net start wuauserv
 echo [%date% %time%] Windows Update diaktifkan >> "%LOGFILE%"
-pause
+echo Melanjutkan dalam 5 detik...
+timeout /t 5 /nobreak >nul
 goto MENU
 
 :EnableTempUpdate
@@ -145,7 +147,8 @@ set /p DURASI_DAY="Masukkan jumlah hari aktif Windows Update sementara [2/3/7]: 
 for /f %%i in ('powershell -NoProfile -Command "(Get-Date).AddDays(%DURASI_DAY%).ToString('yyyy-MM-dd')"') do set SCHED_DATE=%%i
 schtasks /create /tn "EnableWindowsUpdateTemp" /tr "powershell -Command 'Start-Process \"C:\\Windows\\scripts\\EnableUpdate.bat\" -Verb RunAs'" /sc once /st 00:00 /sd !SCHED_DATE! /rl highest /f
 echo [%date% %time%] Windows Update sementara diaktifkan selama %DURASI_DAY% hari >> "%LOGFILE%"
-pause
+echo Melanjutkan dalam 5 detik...
+timeout /t 5 /nobreak >nul
 goto MENU
 
 :CheckStatus
@@ -155,7 +158,8 @@ echo ================================
 echo Status Windows Update:
 if /i "!STATUS!"=="RUNNING" (echo [ACTIVE] Windows Update berjalan.) else (echo [INACTIVE] Windows Update berhenti.)
 echo [%date% %time%] Status Windows Update dicek >> "%LOGFILE%"
-pause
+echo Melanjutkan dalam 5 detik...
+timeout /t 5 /nobreak >nul
 goto MENU
 
 :ResetWindowsUpdate
@@ -166,7 +170,8 @@ reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" /f >nul 2>&1
 sc config wuauserv start= auto
 net start wuauserv
 echo [%date% %time%] Windows Update direset >> "%LOGFILE%"
-pause
+echo Melanjutkan dalam 5 detik...
+timeout /t 5 /nobreak >nul
 goto MENU
 
 :ClearCache
@@ -174,7 +179,8 @@ takeown /f "%windir%\SoftwareDistribution" /r /d y >nul
 icacls "%windir%\SoftwareDistribution" /grant Administrators:F /t >nul
 rd /s /q "%windir%\SoftwareDistribution\Download"
 echo [%date% %time%] Cache Windows Update dihapus >> "%LOGFILE%"
-pause
+echo Melanjutkan dalam 5 detik...
+timeout /t 5 /nobreak >nul
 goto MENU
 
 :: =====================================
@@ -201,5 +207,6 @@ if exist "%SystemRoot%\System32\mpcmdrun.exe" (
 ) else (
     echo Gagal memperbaiki Windows Defender. >> "%LOGFILE%"
 )
-pause
+echo Melanjutkan dalam 5 detik...
+timeout /t 5 /nobreak >nul
 goto MENU
