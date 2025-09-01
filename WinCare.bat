@@ -24,7 +24,9 @@ if "%ADMIN_CHECK%"=="NotAdmin" (
 
 :: Jika sudah dengan hak admin, lakukan pengecekan pembaruan
 echo Mengecek Pembaruan...
-curl -L -o "%TEMP_SCRIPT%" "%SCRIPT_URL%" >nul 2>&1
+
+:: Menggunakan PowerShell untuk mendownload script terbaru
+powershell -Command "try { Invoke-WebRequest -Uri '%SCRIPT_URL%' -OutFile '%TEMP_SCRIPT%' -ErrorAction Stop } catch { exit 1 }"
 if errorlevel 1 (
     echo GAGAL: Internet tidak tersedia atau belum terhubung!
     echo Melanjutkan dalam 10 detik...
@@ -193,40 +195,11 @@ if errorlevel 1 (
 )
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Defender" /f >nul 2>&1
-if exist "%ProgramFiles%\Windows Defender\MpCmdRun.exe" (
-    "%ProgramFiles%\Windows Defender\MpCmdRun.exe" -SignatureUpdate
-)
-echo [%date% %time%] Windows Defender diperbaiki >> "%LOGFILE%"
-pause
-goto MENU
-
-:: =====================================
-:: Download Browser
-:: =====================================
-:DownloadBrowser
-cls
-echo Pilih browser:
-echo 1. Microsoft Edge
-echo 2. Google Chrome
-echo 3. Mozilla Firefox
-echo 4. Opera
-set /p browser_choice="Masukkan pilihan [1-4]: "
-
-if "%browser_choice%"=="1" (
-    echo Mengunduh Microsoft Edge...
-    start https://www.microsoft.com/edge
-)
-if "%browser_choice%"=="2" (
-    echo Mengunduh Google Chrome...
-    start https://www.google.com/chrome/
-)
-if "%browser_choice%"=="3" (
-    echo Mengunduh Mozilla Firefox...
-    start https://www.mozilla.org/en-US/firefox/new/
-)
-if "%browser_choice%"=="4" (
-    echo Mengunduh Opera...
-    start https://www.opera.com/
+if exist "%SystemRoot%\System32\mpcmdrun.exe" (
+    "%SystemRoot%\System32\mpcmdrun.exe" -scan
+    echo [%date% %time%] Windows Defender diperbaiki dan menjalankan pemindaian >> "%LOGFILE%"
+) else (
+    echo Gagal memperbaiki Windows Defender. >> "%LOGFILE%"
 )
 pause
 goto MENU
