@@ -4,60 +4,65 @@
 :: Auto-update via GitHub r3ndycom
 :: =====================================
 
-:: Cek jika sudah dijalankan dengan hak admin
-set ADMIN_CHECK=%1
+:: -------------------------------
+:: Auto-update MD5 dari GitHub dengan feedback singkat & countdown
+:: -------------------------------
+set SCRIPT_URL=https://raw.githubusercontent.com/r3ndycom/WinCare/main/WinCare.bat
+set TEMP_SCRIPT=%TEMP%\WinCare_new.bat
+
+:: Memeriksa apakah script sudah dijalankan dengan hak admin
 if not defined ADMIN_CHECK (
-    echo Menjalankan dengan hak admin...
-    powershell -Command "Start-Process '%~f0' -ArgumentList 'Admin' -Verb runAs"
+    set ADMIN_CHECK=NotAdmin
+)
+
+if "%ADMIN_CHECK%"=="NotAdmin" (
+    echo Memeriksa Pembaruan pertama kali...
+    set "ADMIN_CHECK=Admin"
+    powershell -Command "Start-Process '%~f0' -Verb runAs"
     exit
 )
 
-:: -------------------------------
-:: Cek pembaruan hanya jika sudah dijalankan dengan hak admin
-if "%ADMIN_CHECK%"=="Admin" (
-    set SCRIPT_URL=https://raw.githubusercontent.com/r3ndycom/WinCare/main/WinCare.bat
-    set TEMP_SCRIPT=%TEMP%\WinCare_new.bat
+:: Jika sudah dengan hak admin, lakukan pengecekan pembaruan
+echo Mengecek Pembaruan...
+curl -L -o "%TEMP_SCRIPT%" "%SCRIPT_URL%" >nul 2>&1
+if errorlevel 1 (
+    echo GAGAL: Internet tidak tersedia atau belum terhubung!
+    echo Melanjutkan dalam 10 detik...
+    timeout /t 10 /nobreak >nul
+    goto :MENU
+)
 
-    echo Mengecek Pembaruan...
-    powershell -Command "try { Invoke-WebRequest -Uri '%SCRIPT_URL%' -OutFile '%TEMP_SCRIPT%' -UseBasicParsing; exit 0 } catch { exit 1 }"
+echo Menghitung MD5 file lokal...
+certutil -hashfile "%~f0" MD5 | find /i /v "hash" | find /i /v "CertUtil" > "%TEMP%\local_md5.txt"
+set /p LOCAL_MD5=<"%TEMP%\local_md5.txt"
+
+echo Menghitung MD5 file terbaru dari GitHub...
+certutil -hashfile "%TEMP_SCRIPT%" MD5 | find /i /v "hash" | find /i /v "CertUtil" > "%TEMP%\new_md5.txt"
+set /p NEW_MD5=<"%TEMP%\new_md5.txt"
+
+if "%LOCAL_MD5%"=="%NEW_MD5%" (
+    echo Versi sudah terbaru.
+    echo Melanjutkan dalam 10 detik...
+    timeout /t 10 /nobreak >nul
+) else (
+    echo File baru terdeteksi! Mengupdate WinCare...
+    move /y "%TEMP_SCRIPT%" "%~f0" >nul 2>&1
     if errorlevel 1 (
-        echo GAGAL: Internet tidak tersedia atau belum terhubung!
-        echo Melanjutkan dalam 10 detik...
-        timeout /t 10 /nobreak >nul
-        goto :MENU
-    )
-
-    echo Menghitung MD5 file lokal...
-    certutil -hashfile "%~f0" MD5 | find /i /v "hash" | find /i /v "CertUtil" > "%TEMP%\local_md5.txt"
-    set /p LOCAL_MD5=<"%TEMP%\local_md5.txt"
-
-    echo Menghitung MD5 file terbaru dari GitHub...
-    certutil -hashfile "%TEMP_SCRIPT%" MD5 | find /i /v "hash" | find /i /v "CertUtil" > "%TEMP%\new_md5.txt"
-    set /p NEW_MD5=<"%TEMP%\new_md5.txt"
-
-    if "%LOCAL_MD5%"=="%NEW_MD5%" (
-        echo Versi sudah terbaru.
+        echo GAGAL: Tidak bisa memperbarui file!
         echo Melanjutkan dalam 10 detik...
         timeout /t 10 /nobreak >nul
     ) else (
-        echo File baru terdeteksi! Mengupdate WinCare...
-        move /y "%TEMP_SCRIPT%" "%~f0" >nul 2>&1
-        if errorlevel 1 (
-            echo GAGAL: Tidak bisa memperbarui file!
-            echo Melanjutkan dalam 10 detik...
-            timeout /t 10 /nobreak >nul
-        ) else (
-            echo Update SUKSES!
-            echo Melanjutkan dalam 10 detik...
-            timeout /t 10 /nobreak >nul
-            start "" "%~f0"
-            exit
-        )
+        echo Update SUKSES!
+        echo Melanjutkan dalam 10 detik...
+        timeout /t 10 /nobreak >nul
+        start "" "%~f0"
+        exit
     )
 )
 
 :: -------------------------------
 :: Cek hak admin
+:: -------------------------------
 NET SESSION >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     powershell -Command "Start-Process '%~f0' -Verb runAs"
@@ -205,125 +210,23 @@ echo 1. Microsoft Edge
 echo 2. Google Chrome
 echo 3. Mozilla Firefox
 echo 4. Opera
-set /p browser="Masukkan pilihan [1-4] lalu tekan Enter: "
+set /p browser_choice="Masukkan pilihan [1-4]: "
 
-if "%browser%"=="1" if "%ARCH%"=="x64" set "URL=https://go.microsoft.com/fwlink/?LinkID=2093437#/setup.msi"
-if "%browser%"=="1" if "%ARCH%"=="x86" set "URL=https://go.microsoft.com/fwlink/?LinkID=2093505#/setup.msi"
-if "%browser%"=="2" if "%ARCH%"=="x64" set "URL=https://dl.google.com/release2/chrome/AAB4yU4o/GoogleChromeStandaloneEnterprise64.msi"
-if "%browser%"=="2" if "%ARCH%"=="x86" set "URL=https://dl.google.com/release2/chrome/AAB4yU4o/GoogleChromeStandaloneEnterprise.msi"
-if "%browser%"=="3" if "%ARCH%"=="x64" set "URL=https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=en-US"
-if "%browser%"=="3" if "%ARCH%"=="x86" set "URL=https://download.mozilla.org/?product=firefox-latest-ssl&os=win&lang=en-US"
-if "%browser%"=="4" if "%ARCH%"=="x64" set "URL=https://download.opera.com/download/get/?id=73280&location=424&nothanks=yes&sub=marine&utm_tryagain=yes"
-if "%browser%"=="4" if "%ARCH%"=="x86" set "URL=https://download.opera.com/download/get/?id=73279&location=424&nothanks=yes&sub=marine&utm_tryagain=yes"
-
-set FILE=%TEMP%\browser_installer.exe
-powershell -Command "try { Invoke-WebRequest -Uri '%URL%' -OutFile '%FILE%' -UseBasicParsing; exit 0 } catch { exit 1 }"
-if exist "%FILE%" (
-    start /wait "" "%FILE%" /silent /verysilent /install
-    if exist "%FILE%" del /f /q "%FILE%"
+if "%browser_choice%"=="1" (
+    echo Mengunduh Microsoft Edge...
+    start https://www.microsoft.com/edge
 )
-pause
-goto MENU
-
-:: =====================================
-:: Manage Startup (Stabil)
-:: =====================================
-:ManageStartup
-cls
-echo ==================================================
-echo Startup Manager - Pilih dan Hapus (Rapi & Aman)
-echo ==================================================
-setlocal enabledelayedexpansion
-set COUNT=0
-set SEEN=
-
-:: Folder Startup user
-echo Folder Startup user:
-for %%f in ("%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\*") do (
-    if exist "%%f" (
-        set "VAL=file|%%f"
-        if "!SEEN!" not contains "!VAL!" (
-            set /a COUNT+=1
-            set "STARTUP[!COUNT!]=!VAL!"
-            set "SEEN=!SEEN! !VAL! "
-            echo !COUNT!. %%~nxf
-        )
-    )
+if "%browser_choice%"=="2" (
+    echo Mengunduh Google Chrome...
+    start https://www.google.com/chrome/
 )
-if !COUNT! EQU 0 echo (Kosong)
-
-:: Registry Current User
-echo.
-echo Startup Registry (Current User):
-for /f "tokens=1*" %%a in ('reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" 2^>nul') do (
-    if "%%a" NEQ "" (
-        set "VAL=regcu|%%a"
-        if "!SEEN!" not contains "!VAL!" (
-            set /a COUNT+=1
-            set "STARTUP[!COUNT!]=!VAL!"
-            set "SEEN=!SEEN! !VAL! "
-            echo !COUNT!. %%a - %%b
-        )
-    )
+if "%browser_choice%"=="3" (
+    echo Mengunduh Mozilla Firefox...
+    start https://www.mozilla.org/en-US/firefox/new/
 )
-
-:: Registry All Users
-echo.
-echo Startup Registry (All Users):
-for /f "tokens=1*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" 2^>nul') do (
-    if "%%a" NEQ "" (
-        set "VAL=reglu|%%a"
-        if "!SEEN!" not contains "!VAL!" (
-            set /a COUNT+=1
-            set "STARTUP[!COUNT!]=!VAL!"
-            set "SEEN=!SEEN! !VAL! "
-            echo !COUNT!. %%a - %%b
-        )
-    )
-)
-
-:DELETE_LOOP
-echo.
-set /p delnum="Masukkan nomor item yang ingin dihapus (0 untuk selesai): "
-if "%delnum%"=="0" goto END_MANAGE
-if not defined STARTUP[%delnum%] (
-    echo Nomor tidak valid!
-    goto DELETE_LOOP
-)
-set "ITEM=!STARTUP[%delnum%]!"
-for /f "tokens=1,2 delims=|" %%x in ("!ITEM!") do (
-    set "TYPE=%%x"
-    set "VAL=%%y"
-)
-if "!TYPE!"=="file" (
-    if exist "!VAL!" del /f /q "!VAL!"
-    echo [%date% %time%] File !VAL! dihapus >> "%LOGFILE%"
-) else if "!TYPE!"=="regcu" (
-    reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "!VAL!" /f >nul 2>&1
-    echo [%date% %time%] Registry HKCU !VAL! dihapus >> "%LOGFILE%"
-) else if "!TYPE!"=="reglu" (
-    reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /v "!VAL!" /f >nul 2>&1
-    echo [%date% %time%] Registry HKLM !VAL! dihapus >> "%LOGFILE%"
-)
-set "STARTUP[%delnum%]="
-goto DELETE_LOOP
-
-:END_MANAGE
-pause
-endlocal
-goto MENU
-
-:: =====================================
-:: ESET Online Scanner
-:: =====================================
-:InstallESET
-cls
-set "ESET_URL=https://download.eset.com/com/eset/tools/online_scanner/latest/esetonlinescanner.exe"
-set "ESET_FILE=%TEMP%\eset_online.exe"
-powershell -Command "try { Invoke-WebRequest -Uri '%ESET_URL%' -OutFile '%ESET_FILE%' -UseBasicParsing; exit 0 } catch { exit 1 }"
-if exist "%ESET_FILE%" (
-    start /wait "" "%ESET_FILE%" /S
-    if exist "%ESET_FILE%" del /f /q "%ESET_FILE%"
+if "%browser_choice%"=="4" (
+    echo Mengunduh Opera...
+    start https://www.opera.com/
 )
 pause
 goto MENU
