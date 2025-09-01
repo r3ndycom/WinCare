@@ -4,52 +4,60 @@
 :: Auto-update via GitHub r3ndycom
 :: =====================================
 
-:: -------------------------------
-:: Auto-update MD5 dari GitHub dengan feedback singkat & countdown
-:: -------------------------------
-set SCRIPT_URL=https://raw.githubusercontent.com/r3ndycom/WinCare/main/WinCare.bat
-set TEMP_SCRIPT=%TEMP%\WinCare_new.bat
-
-echo Mengecek Pembaruan...
-powershell -Command "try { Invoke-WebRequest -Uri '%SCRIPT_URL%' -OutFile '%TEMP_SCRIPT%' -UseBasicParsing; exit 0 } catch { exit 1 }"
-if errorlevel 1 (
-    echo GAGAL: Internet tidak tersedia atau belum terhubung!
-    echo Melanjutkan dalam 10 detik...
-    timeout /t 10 /nobreak >nul
-    goto :MENU
+:: Cek jika sudah dijalankan dengan hak admin
+set ADMIN_CHECK=%1
+if not defined ADMIN_CHECK (
+    echo Menjalankan dengan hak admin...
+    powershell -Command "Start-Process '%~f0' -ArgumentList 'Admin' -Verb runAs"
+    exit
 )
 
-echo Menghitung MD5 file lokal...
-certutil -hashfile "%~f0" MD5 | find /i /v "hash" | find /i /v "CertUtil" > "%TEMP%\local_md5.txt"
-set /p LOCAL_MD5=<"%TEMP%\local_md5.txt"
+:: -------------------------------
+:: Cek pembaruan hanya jika sudah dijalankan dengan hak admin
+if "%ADMIN_CHECK%"=="Admin" (
+    set SCRIPT_URL=https://raw.githubusercontent.com/r3ndycom/WinCare/main/WinCare.bat
+    set TEMP_SCRIPT=%TEMP%\WinCare_new.bat
 
-echo Menghitung MD5 file terbaru dari GitHub...
-certutil -hashfile "%TEMP_SCRIPT%" MD5 | find /i /v "hash" | find /i /v "CertUtil" > "%TEMP%\new_md5.txt"
-set /p NEW_MD5=<"%TEMP%\new_md5.txt"
-
-if "%LOCAL_MD5%"=="%NEW_MD5%" (
-    echo Versi sudah terbaru.
-    echo Melanjutkan dalam 10 detik...
-    timeout /t 10 /nobreak >nul
-) else (
-    echo File baru terdeteksi! Mengupdate WinCare...
-    move /y "%TEMP_SCRIPT%" "%~f0" >nul 2>&1
+    echo Mengecek Pembaruan...
+    powershell -Command "try { Invoke-WebRequest -Uri '%SCRIPT_URL%' -OutFile '%TEMP_SCRIPT%' -UseBasicParsing; exit 0 } catch { exit 1 }"
     if errorlevel 1 (
-        echo GAGAL: Tidak bisa memperbarui file!
+        echo GAGAL: Internet tidak tersedia atau belum terhubung!
+        echo Melanjutkan dalam 10 detik...
+        timeout /t 10 /nobreak >nul
+        goto :MENU
+    )
+
+    echo Menghitung MD5 file lokal...
+    certutil -hashfile "%~f0" MD5 | find /i /v "hash" | find /i /v "CertUtil" > "%TEMP%\local_md5.txt"
+    set /p LOCAL_MD5=<"%TEMP%\local_md5.txt"
+
+    echo Menghitung MD5 file terbaru dari GitHub...
+    certutil -hashfile "%TEMP_SCRIPT%" MD5 | find /i /v "hash" | find /i /v "CertUtil" > "%TEMP%\new_md5.txt"
+    set /p NEW_MD5=<"%TEMP%\new_md5.txt"
+
+    if "%LOCAL_MD5%"=="%NEW_MD5%" (
+        echo Versi sudah terbaru.
         echo Melanjutkan dalam 10 detik...
         timeout /t 10 /nobreak >nul
     ) else (
-        echo Update SUKSES!
-        echo Melanjutkan dalam 10 detik...
-        timeout /t 10 /nobreak >nul
-        start "" "%~f0"
-        exit
+        echo File baru terdeteksi! Mengupdate WinCare...
+        move /y "%TEMP_SCRIPT%" "%~f0" >nul 2>&1
+        if errorlevel 1 (
+            echo GAGAL: Tidak bisa memperbarui file!
+            echo Melanjutkan dalam 10 detik...
+            timeout /t 10 /nobreak >nul
+        ) else (
+            echo Update SUKSES!
+            echo Melanjutkan dalam 10 detik...
+            timeout /t 10 /nobreak >nul
+            start "" "%~f0"
+            exit
+        )
     )
 )
 
 :: -------------------------------
 :: Cek hak admin
-:: -------------------------------
 NET SESSION >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
     powershell -Command "Start-Process '%~f0' -Verb runAs"
